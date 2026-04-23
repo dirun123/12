@@ -1,0 +1,50 @@
+<script>
+    async function captureEverything() {
+        // 1. Browser එකේ තියෙන Navigator සහ Screen දත්ත ඔක්කොම එකතු කරමු
+        const browserData = {};
+        
+        // Navigator එකේ තියෙන හැම Key එකක්ම Loop කරනවා
+        for (let i in navigator) {
+            try {
+                // සමහර දේවල් වලට Permission නැති නිසා try-catch දානවා
+                if (typeof navigator[i] !== 'function' && typeof navigator[i] !== 'object') {
+                    browserData[i] = navigator[i];
+                }
+            } catch (e) {}
+        }
+
+        // Screen එකේ දත්ත
+        browserData.screen = {
+            width: window.screen.width,
+            height: window.screen.height,
+            availWidth: window.screen.availWidth,
+            availHeight: window.screen.availHeight,
+            colorDepth: window.screen.colorDepth,
+            pixelDepth: window.screen.pixelDepth
+        };
+
+        try {
+            // 2. Backend එකෙන් එන සර්වර් ඩේටා ටික ගන්නවා
+            const response = await fetch('/api/raw');
+            const serverData = await response.json();
+
+            // 3. සේරම එකට එකතු කරනවා
+            const megaPayload = {
+                source: "Syntiox Raw Data Collector",
+                serverSide: serverData,
+                clientSide: browserData
+            };
+
+            // Screen එකේ පෙන්වනවා
+            document.getElementById('data-view').innerText = JSON.stringify(megaPayload, null, 4);
+            
+            // මේ ටික Database එකකට යවන්න නම් මෙතනින් Fetch එකක් දාන්න විතරයි තියෙන්නේ
+            console.log("Captured Everything:", megaPayload);
+
+        } catch (err) {
+            document.getElementById('data-view').innerText = "Data fetch error!";
+        }
+    }
+
+    captureEverything();
+</script>
