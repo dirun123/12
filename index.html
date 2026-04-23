@@ -1,50 +1,93 @@
-<script>
-    async function captureEverything() {
-        // 1. Browser එකේ තියෙන Navigator සහ Screen දත්ත ඔක්කොම එකතු කරමු
-        const browserData = {};
-        
-        // Navigator එකේ තියෙන හැම Key එකක්ම Loop කරනවා
-        for (let i in navigator) {
-            try {
-                // සමහර දේවල් වලට Permission නැති නිසා try-catch දානවා
-                if (typeof navigator[i] !== 'function' && typeof navigator[i] !== 'object') {
-                    browserData[i] = navigator[i];
-                }
-            } catch (e) {}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syntiox Raw Tracker</title>
+    <style>
+        body { 
+            background: #000; 
+            color: #0f0; 
+            font-family: 'Courier New', Courier, monospace; 
+            padding: 20px; 
+            line-height: 1.4;
         }
+        .container { border: 1px solid #0f0; padding: 20px; border-radius: 5px; }
+        h1 { color: #fff; border-bottom: 2px solid #0f0; padding-bottom: 10px; }
+        pre { 
+            white-space: pre-wrap; 
+            word-wrap: break-word; 
+            background: #111; 
+            padding: 15px; 
+            border-radius: 5px;
+            font-size: 13px;
+        }
+        .loading { color: yellow; font-weight: bold; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
 
-        // Screen එකේ දත්ත
-        browserData.screen = {
-            width: window.screen.width,
-            height: window.screen.height,
-            availWidth: window.screen.availWidth,
-            availHeight: window.screen.availHeight,
-            colorDepth: window.screen.colorDepth,
-            pixelDepth: window.screen.pixelDepth
-        };
+<div class="container">
+    <h1>Gimhan's Raw Data Collector</h1>
+    <div id="status" class="loading">දත්ත ලබා ගනිමින් පවතිනවා (Fetching Data)...</div>
+    <pre id="display-area"></pre>
+</div>
+
+<script>
+    async function getEverything() {
+        const display = document.getElementById('display-area');
+        const status = document.getElementById('status');
 
         try {
-            // 2. Backend එකෙන් එන සර්වර් ඩේටා ටික ගන්නවා
-            const response = await fetch('/api/raw');
-            const serverData = await response.json();
+            // 1. Browser ඩේටා ටික ගමු
+            let browserInfo = {};
+            for (let prop in navigator) {
+                if (typeof navigator[prop] !== 'function') {
+                    browserInfo[prop] = navigator[prop];
+                }
+            }
 
-            // 3. සේරම එකට එකතු කරනවා
-            const megaPayload = {
-                source: "Syntiox Raw Data Collector",
-                serverSide: serverData,
-                clientSide: browserData
+            // 2. සර්වර් එකෙන් එන දත්ත ගමු
+            const response = await fetch('/api/raw');
+            
+            if (!response.ok) {
+                throw new Error(`Server Response Error: ${response.status}`);
+            }
+
+            const serverInfo = await response.json();
+
+            // 3. දෙකම එකතු කරලා Mega Object එක හදමු
+            const fullData = {
+                message: "Syntiox Intelligence Captured",
+                timestamp: new Date().toISOString(),
+                serverSide: serverInfo,
+                clientSide: {
+                    navigator: browserInfo,
+                    screen: {
+                        w: window.screen.width,
+                        h: window.screen.height,
+                        color: window.screen.colorDepth
+                    },
+                    location: window.location.href
+                }
             };
 
-            // Screen එකේ පෙන්වනවා
-            document.getElementById('data-view').innerText = JSON.stringify(megaPayload, null, 4);
-            
-            // මේ ටික Database එකකට යවන්න නම් මෙතනින් Fetch එකක් දාන්න විතරයි තියෙන්නේ
-            console.log("Captured Everything:", megaPayload);
+            // Display කරමු
+            status.innerHTML = "✅ සාර්ථකව දත්ත ලබා ගත්තා (Data Captured Successfully):";
+            status.classList.remove('loading');
+            display.innerText = JSON.stringify(fullData, null, 4);
 
         } catch (err) {
-            document.getElementById('data-view').innerText = "Data fetch error!";
+            status.innerHTML = "❌ අවුලක් වුණා (Error): " + err.message;
+            status.classList.add('error');
+            console.error(err);
         }
     }
 
-    captureEverything();
+    // Page එක load වුණු ගමන් run වෙන්න
+    window.onload = getEverything;
 </script>
+
+</body>
+</html>
