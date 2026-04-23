@@ -1,17 +1,19 @@
 export default function handler(req, res) {
-    // සර්වර් එකට ලැබෙන ඕනෑම දෙයක් (Headers, Body, Query) මේකේ තියෙනවා
-    const allServerData = {
-        method: req.method,
-        url: req.url,
-        headers: req.headers, // මේකේ තමයි ඔක්කොම ටික තියෙන්නේ
-        query: req.query,
-        body: req.body,
-        vercelGeo: {
-            city: req.headers['x-vercel-ip-city'],
-            country: req.headers['x-vercel-ip-country'],
-            ip: req.headers['x-forwarded-for']
-        }
-    };
-
-    res.status(200).json(allServerData);
+    try {
+        const rawData = {
+            method: req.method,
+            url: req.url,
+            headers: req.headers, // සම්පූර්ණ headers ටික
+            query: req.query,
+            body: req.body,
+            vercelInfo: {
+                city: req.headers['x-vercel-ip-city'] || "Unknown",
+                country: req.headers['x-vercel-ip-country'] || "Unknown",
+                ip: req.headers['x-forwarded-for'] || "Unknown"
+            }
+        };
+        res.status(200).json(rawData);
+    } catch (error) {
+        res.status(500).json({ error: "Server Error", details: error.message });
+    }
 }
