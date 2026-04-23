@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Syntiox Raw Tracker</title>
+    <title>Syntiox Raw Tracker - Downloader</title>
     <style>
         body { 
             background: #000; 
@@ -12,7 +12,7 @@
             padding: 20px; 
             line-height: 1.4;
         }
-        .container { border: 1px solid #0f0; padding: 20px; border-radius: 5px; }
+        .container { border: 1px solid #0f0; padding: 20px; border-radius: 5px; position: relative; }
         h1 { color: #fff; border-bottom: 2px solid #0f0; padding-bottom: 10px; }
         pre { 
             white-space: pre-wrap; 
@@ -21,31 +21,62 @@
             padding: 15px; 
             border-radius: 5px;
             font-size: 13px;
+            max-height: 500px;
+            overflow-y: auto;
         }
         .loading { color: yellow; font-weight: bold; }
         .error { color: red; }
+        
+        /* බටන් එකේ ස්ටයිල් එක */
+        .btn {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+            border-radius: 3px;
+            font-family: inherit;
+        }
+        .btn:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+        .btn:hover:not(:disabled) {
+            background: #0c0;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>Gimhan's Raw Data Collector</h1>
+    
+    <button id="download-btn" class="btn" disabled>Download JSON</button>
+    
     <div id="status" class="loading">දත්ත ලබා ගනිමින් පවතිනවා (Fetching Data)...</div>
     <pre id="display-area"></pre>
 </div>
 
 <script>
+    let capturedData = null; // ඩේටා ටික store කරගන්න variable එකක්
+
     async function getEverything() {
         const display = document.getElementById('display-area');
         const status = document.getElementById('status');
+        const downloadBtn = document.getElementById('download-btn');
 
         try {
             // 1. Browser ඩේටා ටික ගමු
             let browserInfo = {};
             for (let prop in navigator) {
-                if (typeof navigator[prop] !== 'function') {
-                    browserInfo[prop] = navigator[prop];
-                }
+                try {
+                    if (typeof navigator[prop] !== 'function') {
+                        browserInfo[prop] = navigator[prop];
+                    }
+                } catch(e) {}
             }
 
             // 2. සර්වර් එකෙන් එන දත්ත ගමු
@@ -58,7 +89,7 @@
             const serverInfo = await response.json();
 
             // 3. දෙකම එකතු කරලා Mega Object එක හදමු
-            const fullData = {
+            capturedData = {
                 message: "Syntiox Intelligence Captured",
                 timestamp: new Date().toISOString(),
                 serverSide: serverInfo,
@@ -73,19 +104,41 @@
                 }
             };
 
-            // Display කරමු
-            status.innerHTML = "✅ සාර්ථකව දත්ත ලබා ගත්තා (Data Captured Successfully):";
+            // පේජ් එකේ පෙන්වමු
+            status.innerHTML = "✅ සාර්ථකව දත්ත ලබා ගත්තා:";
             status.classList.remove('loading');
-            display.innerText = JSON.stringify(fullData, null, 4);
+            display.innerText = JSON.stringify(capturedData, null, 4);
+            
+            // දත්ත ලෝඩ් වුණාට පස්සේ බටන් එක එනේබල් කරමු
+            downloadBtn.disabled = false;
 
         } catch (err) {
-            status.innerHTML = "❌ අවුලක් වුණා (Error): " + err.message;
+            status.innerHTML = "❌ අවුලක් වුණා: " + err.message;
             status.classList.add('error');
             console.error(err);
         }
     }
 
-    // Page එක load වුණු ගමන් run වෙන්න
+    // JSON එක බාගත කරන Function එක
+    document.getElementById('download-btn').addEventListener('click', () => {
+        if (!capturedData) return;
+
+        // JSON එක Blob එකක් බවට හරවනවා
+        const blob = new Blob([JSON.stringify(capturedData, null, 4)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // තාවකාලිකව Link එකක් හදලා ක්ලික් කරනවා
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `visitor_data_${new Date().getTime()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        
+        // පස්සේ ඒ ලින්ක් එක අයින් කරනවා
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
     window.onload = getEverything;
 </script>
 
